@@ -28,3 +28,18 @@ export class MessagesFilterInput {
   @IsOptional()
   endDate: string;
 }
+
+export class TaggedMessagesInput{
+  @ApiProperty({
+    required: true,
+    description:
+      'List of conversationIds for whom the messages are to be fetched',
+  })
+  conversationIds: string[];
+
+  @ApiProperty({
+    description: 'tags for the messages to be filtered',
+    required: false,
+  })
+  tags: string[];
+}

@@ -1,4 +1,4 @@
-import { forwardRef, Inject, Injectable } from '@nestjs/common';
+import { forwardRef, HttpException, HttpStatus, Inject, Injectable } from '@nestjs/common';
 import {
   ChatMessage,
   PaginatedChatMessages,
@@ -13,6 +13,7 @@ import {
   ResolveMessageDto,
   ReactionDto,
   PollOptionDto,
+  TagMessageDto,
 } from './models/message.dto';
 import { MessageData } from './message.data';
 import { IAuthenticatedUser } from '../authentication/jwt.strategy';
@@ -29,6 +30,7 @@ import {
   UnresolveMessageEvent,
   ReactedMessageEvent,
   UnReactedMessageEvent,
+  TaggedMessageEvent,
 } from '../conversation/conversation-channel.socket';
 import { UserService } from '../user/user.service';
 import { ConversationData } from '../conversation/conversation.data';
@@ -47,6 +49,7 @@ import {
   MessageGroupedByConversationOutput,
   MessagesFilterInput,
 } from '../conversation/models/messagesFilterInput';
+import { Tag } from '../conversation/models/CreateChatConversation.dto';
 
 export interface IMessageLogic {
   create(
@@ -324,6 +327,15 @@ export class MessageLogic implements IMessageLogic {
       conversationIds.map((id) => new Types.ObjectId(id)),
       startDate,
       endDate,
+    );
+  }
+
+  //other users to find messages by the tags
+  async getMessagesByTags(messageTagInput: TaggedMessagesInput){
+    const { conversationIds, tags} = messageTagInput;
+    return await this.messageData.getMessagesGroupedByConversation(
+      conversationIds.map((id) => new Types.ObjectId(id)),
+      tags,
     );
   }
 
@@ -697,4 +709,34 @@ export class MessageLogic implements IMessageLogic {
 
     return pollOption;
   }
+
+  async addTagToMessage(
+    tag: TagMessageDto,
+    authenticatedUser: IAuthenticatedUser,
+  ) {
+    await this.throwForbiddenErrorIfNotAuthorized(
+      authenticatedUser,
+      tag.messageId,
+      Action.readConversation,
+    );
+
+    const message = await this.messageData.addTag(
+      tag.tag,
+      authenticatedUser.userId,
+      tag.messageId,
+    );
+
+    const messageEvent = new TaggedMessageEvent({
+      userId: authenticatedUser.userId,
+      messageId: tag.messageId,
+      tag: tag.tag,
+    });
+    this.conversationChannel.send(
+      messageEvent,
+      tag.conversationId.toHexString(),
+    );
+
+    return message;
+  }
+
 }

@@ -177,3 +177,21 @@ export class ReactionDto {
   @Field(() => ObjectID)
   conversationId: ObjectID;
 }
+
+
+@InputType()
+export class TagMessageDto {
+  @Field(() => String)
+  tag: string;
+
+  @Field(() => ObjectID)
+  userId: ObjectID;
+
+  @Field(() => ObjectID)
+  messageId: ObjectID;
+
+  @Field(() => ObjectID)
+  conversationId: ObjectID;
+
+//  tag type to get similar tagged messages
+}

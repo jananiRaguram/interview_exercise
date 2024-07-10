@@ -25,6 +25,17 @@ export class UnlikeMessageEvent implements BaseEventType {
   constructor(public message: { userId: ObjectId; messageId: ObjectId }) {}
 }
 
+export class TaggedMessageEvent implements BaseEventType {
+  public name = 'tagged-message';
+  constructor(
+    public message: {
+      userId: ObjectId;
+      messageId: ObjectId;
+      tag: string;
+    },
+  ) {}
+}
+
 export class ReactedMessageEvent implements BaseEventType {
   public name = 'reacted-message';
   constructor(

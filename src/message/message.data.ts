@@ -11,6 +11,7 @@ import { MessageDto, GetMessageDto } from './models/message.dto';
 import { ObjectID } from 'mongodb';
 import { createRichContent } from './utils/message.helper';
 import { MessageGroupedByConversationOutput } from '../conversation/models/messagesFilterInput';
+import { optional } from 'joi';
 
 @Injectable()
 export class MessageData {
@@ -29,6 +30,7 @@ export class MessageData {
     chatMessage.conversationId = data.conversationId;
     chatMessage.created = new Date();
     chatMessage.deleted = false;
+    
 
     createRichContent(data, chatMessage);
 
@@ -369,4 +371,57 @@ export class MessageData {
 
     return chatMessageToObject(updatedResult);
   }
+
+
+  //simalar to adding reactions, adding tags to a single message
+  async addTag(
+    tag: string,
+    userId: ObjectID,
+    messageId: ObjectID,
+  ): Promise<ChatMessage> {
+    const updatedResult = await this.chatMessageModel.bulkWrite([
+      {
+        updateOne: {
+          filter: {
+            _id: messageId,
+            tags: {
+              $elemMatch: { tag: tag },
+            },
+          },
+          update: {
+            $addToSet: { 'reactions.$.userIds': userId },
+          },
+        },
+      },
+      {
+        updateOne: {
+          filter: {
+            _id: messageId,
+            tags: {
+              $not: {
+                $elemMatch: { tag: tag },
+              },
+            },
+          },
+          update: {
+            $push: {
+              tags: {
+                tag: tag,
+                userIds: [userId],
+                tags: tag,
+              },
+            },
+          },
+        },
+      },
+    ]);
+    if (!updatedResult || updatedResult.matchedCount === 0) {
+      throw new Error(
+        `Failed to add tag, messageId: ${messageId.toHexString()}, tag: ${tag}, userId: ${userId.toHexString()}`,
+      );
+    }
+
+    return this.getMessage(messageId.toHexString());
+  }
+
 }
